@@ -66,12 +66,12 @@ class FocalLossWithLabelSmoothing(nn.Module):
             shape of [batch_size]
         """
         if self.activation_type == 'softmax':
-            idx = target.view(-1, 1).long()                                         # [batch_size, 1]
-            one_hot_key = torch.ones(idx.size(0), self.num_labels, dtype=torch.float32, device=idx.device) * \
-                (self.label_smoothing / (logits.size(-1) - 1))                      # eps / (c - 1)
-            one_hot_key = one_hot_key.scatter_(1, idx, 1 - self.label_smoothing)
+            idx = target.view(-1, 1).long()
+            one_hot_key = torch.zeros(idx.size(0), self.num_labels, dtype=torch.float32, device=idx.device)
+            one_hot_key = one_hot_key.scatter_(1, idx, 1)
+            one_hot_key = one_hot_key * (1 - self.label_smoothing)  # label smooth
             prob = F.softmax(logits, dim=-1)
-            loss = - self.alpha * one_hot_key * torch.pow((1 - prob), self.gamma) * (prob + self.epsilon).log()
+            loss = -self.alpha * one_hot_key * torch.pow((1 - prob), self.gamma) * (prob + self.epsilon).log()
             loss = loss.sum(1)
         elif self.activation_type == 'sigmoid':
             raise NotImplementedError

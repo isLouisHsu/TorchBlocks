@@ -39,3 +39,40 @@ class FocalLoss(nn.Module):
             loss = -self.alpha * multi_hot_key * torch.pow((1 - logits), self.gamma) * (logits + self.epsilon).log()
             loss += -(1 - self.alpha) * zero_hot_key * torch.pow(logits, self.gamma) * (1 - logits + self.epsilon).log()
         return loss.mean()
+
+
+
+class FocalLossWithLabelSmoothing(nn.Module):
+    """
+    Softmax and sigmoid focal loss
+    """
+
+    def __init__(self, num_labels, activation_type='softmax', gamma=2.0, alpha=0.25, epsilon=1.e-9, label_smoothing=0.1):
+
+        super(FocalLossWithLabelSmoothing, self).__init__()
+        self.num_labels = num_labels
+        self.gamma = gamma
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.activation_type = activation_type
+        self.label_smoothing = label_smoothing
+
+    def forward(self, logits, target):
+        """
+        Args:
+            logits: model's output, shape of [batch_size, num_cls]
+            target: ground truth labels, shape of [batch_size]
+        Returns:
+            shape of [batch_size]
+        """
+        if self.activation_type == 'softmax':
+            idx = target.view(-1, 1).long()                                         # [batch_size, 1]
+            one_hot_key = torch.ones(idx.size(0), self.num_labels, dtype=torch.float32, device=idx.device) * \
+                (self.label_smoothing / (logits.size(-1) - 1))                      # eps / (c - 1)
+            one_hot_key = one_hot_key.scatter_(1, idx, 1 - self.label_smoothing)
+            prob = F.softmax(logits, dim=-1)
+            loss = - self.alpha * one_hot_key * torch.pow((1 - prob), self.gamma) * (prob + self.epsilon).log()
+            loss = loss.sum(1)
+        elif self.activation_type == 'sigmoid':
+            raise NotImplementedError
+        return loss.mean()

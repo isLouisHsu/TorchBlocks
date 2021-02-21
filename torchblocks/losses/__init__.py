@@ -5,3 +5,4 @@ from .focal_loss import FocalLoss, FocalLossWithSmoothing
 from .kd_loss import *
 from .label_smoothing import LabelSmoothingCE
 from .dice_loss import BinaryDiceLoss, DiceLoss
+from .hard_mining import HardMining
